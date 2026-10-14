@@ -1,0 +1,1829 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>GRUPO NEXUS | Cotizador mayorista</title>
+<!--
+  GRUPO NEXUS - Cotizador mayorista (archivo único, sin dependencias externas).
+
+  Para cambiar precios, presentaciones, envío o descuento autorizado, edite
+  únicamente el objeto CONFIG al inicio del bloque <script>. No hay que tocar
+  la lógica de cálculo ni el diseño.
+
+  Este archivo es público: todo lo que contiene puede ser leído por quien lo
+  abra. No incluya aquí información reservada de la empresa.
+-->
+<style>
+/* ==========================================================================
+   1. Fundamentos
+   ========================================================================== */
+:root {
+  --tinta: #17232E;
+  --petroleo: #19716D;
+  --petroleo-fuerte: #125551;
+  --blanco: #FAFAF8;
+  --papel: #FFFFFF;
+  --niebla: #EEF1F2;
+  --gris: #5D6872;
+  --linea: #CBD3D8;
+  --linea-suave: #E2E7EA;
+  --seleccion: #E7F2F1;
+  --error: #A3342B;
+  --error-fondo: #FBEDEB;
+  --fuente: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --alto-cab: 60px;
+  --radio: 3px;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-padding-top: calc(var(--alto-cab) + 12px); }
+body {
+  margin: 0;
+  background: var(--blanco);
+  color: var(--tinta);
+  font-family: var(--fuente);
+  font-size: 16px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums lining-nums;
+  -webkit-font-smoothing: antialiased;
+}
+[hidden] { display: none !important; }
+h1, h2, h3, h4, p, dl, dd, ul { margin: 0; padding: 0; }
+ul { list-style: none; }
+button, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--petroleo); outline-offset: 2px; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+.contenedor { max-width: 1320px; margin: 0 auto; padding: 0 20px; }
+.saltar {
+  position: absolute; left: 12px; top: -80px; z-index: 100;
+  background: var(--tinta); color: #fff; padding: 10px 14px;
+  border-radius: var(--radio); text-decoration: none;
+}
+.saltar:focus { top: 12px; }
+
+/* ==========================================================================
+   2. Botones
+   ========================================================================== */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 44px; padding: 0 18px;
+  border: 1px solid var(--tinta); border-radius: var(--radio);
+  background: var(--papel); color: var(--tinta);
+  font-size: 15px; font-weight: 600; line-height: 1.2; text-decoration: none;
+  transition: background-color .15s ease, border-color .15s ease;
+}
+.btn:hover { background: var(--niebla); }
+.btn-primario { background: var(--petroleo); border-color: var(--petroleo); color: #fff; }
+.btn-primario:hover { background: var(--petroleo-fuerte); border-color: var(--petroleo-fuerte); }
+.btn:disabled { background: var(--niebla); border-color: var(--linea); color: #6B7680; cursor: not-allowed; }
+.btn-texto {
+  min-height: 44px; padding: 0 8px; border: 0; background: none;
+  color: var(--gris); font-size: 14px; text-decoration: underline; text-underline-offset: 3px;
+}
+.btn-texto:disabled { opacity: .5; cursor: not-allowed; }
+.btn-texto:hover:not(:disabled) { color: var(--tinta); }
+
+/* ==========================================================================
+   3. Cabecera
+   ========================================================================== */
+.cabecera {
+  position: sticky; top: 0; z-index: 30;
+  background: var(--blanco); border-bottom: 1px solid var(--linea);
+}
+.cabecera-interna {
+  max-width: 1320px; margin: 0 auto; padding: 0 20px;
+  height: var(--alto-cab); display: flex; align-items: center; gap: 16px;
+}
+.marca { display: flex; align-items: center; gap: 10px; color: var(--tinta); text-decoration: none; min-width: 0; }
+.marca-svg { flex: none; color: var(--tinta); }
+.marca-texto { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
+.marca-nombre { font-size: 15px; font-weight: 700; letter-spacing: .1em; }
+.marca-desc { font-size: 12.5px; color: var(--gris); }
+.nav { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+.nav-enlace {
+  display: inline-flex; align-items: center; min-height: 40px; padding: 0 12px;
+  border: 0; border-radius: var(--radio); background: none;
+  color: var(--tinta); font-size: 14.5px; font-weight: 500; text-decoration: none;
+}
+.nav-enlace:hover { background: var(--niebla); }
+.btn-cab { min-height: 40px; padding: 0 14px; font-size: 14px; margin-left: 8px; }
+@media (max-width: 719px) {
+  .nav-enlace { display: none; }
+  .btn-cab { margin-left: 0; }
+  .marca-desc { font-size: 12px; }
+}
+@media (max-width: 380px) {
+  .btn-cab { padding: 0 10px; font-size: 13px; }
+  .cabecera-interna { padding: 0 14px; gap: 10px; }
+}
+
+/* ==========================================================================
+   4. Introducción e identificación de la cotización
+   ========================================================================== */
+.intro {
+  display: grid; gap: 24px; padding: 36px 0 28px;
+  border-bottom: 1px solid var(--linea);
+}
+.intro h1 {
+  font-size: clamp(1.75rem, 1.2rem + 2vw, 2.5rem);
+  line-height: 1.1; font-weight: 700; letter-spacing: -.015em; max-width: 18ch;
+}
+.intro p { margin-top: 12px; max-width: 54ch; color: var(--gris); font-size: 17px; }
+.ficha { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 24px; }
+.ficha > div { border-top: 2px solid var(--tinta); padding-top: 8px; min-width: 0; }
+.ficha dt { font-size: 13px; color: var(--gris); }
+.ficha dd { margin-top: 2px; font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+.ficha-nota { margin-top: 12px; font-size: 12.5px; color: var(--gris); max-width: 60ch; }
+@media (min-width: 900px) {
+  .intro { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 56px; align-items: end; }
+}
+
+/* ==========================================================================
+   5. Estructura de la vista de catálogo
+   ========================================================================== */
+.layout { display: grid; gap: 32px; padding: 28px 0 56px; }
+@media (min-width: 1100px) {
+  .layout { grid-template-columns: minmax(0, 1fr) 360px; gap: 48px; align-items: start; }
+}
+.error-config {
+  margin: 16px 0; padding: 12px 16px; border: 1px solid var(--error);
+  background: var(--error-fondo); color: var(--error); border-radius: var(--radio);
+}
+.error-config ul { margin-top: 6px; padding-left: 18px; list-style: disc; }
+
+/* ==========================================================================
+   6. Catálogo mayorista
+   ========================================================================== */
+.col-catalogo { container: catalogo / inline-size; min-width: 0; }
+.titulo-seccion { font-size: 22px; font-weight: 700; letter-spacing: -.005em; }
+.nota-precios { margin: 6px 0 18px; max-width: 72ch; font-size: 14.5px; color: var(--gris); }
+.barra { display: grid; gap: 14px; margin-bottom: 10px; }
+.busqueda label { display: block; margin-bottom: 6px; font-size: 14px; font-weight: 600; }
+.busqueda input {
+  width: 100%; min-height: 46px; padding: 0 14px;
+  border: 1px solid var(--linea); border-radius: var(--radio);
+  background: var(--papel); font-size: 16px;
+}
+.filtros { display: flex; flex-wrap: wrap; gap: 8px; }
+.filtro {
+  min-height: 42px; padding: 0 14px; border: 1px solid var(--linea);
+  border-radius: var(--radio); background: var(--papel);
+  font-size: 14.5px; font-weight: 500;
+}
+.filtro:hover { background: var(--niebla); }
+.filtro .cuenta { margin-left: 2px; font-weight: 400; color: var(--gris); }
+.filtro[aria-pressed="true"] { background: var(--tinta); border-color: var(--tinta); color: #fff; }
+.filtro[aria-pressed="true"] .cuenta { color: #C9D3DA; }
+.conteo { min-height: 22px; margin-top: 4px; font-size: 13.5px; color: var(--gris); }
+@container catalogo (min-width: 700px) {
+  .barra { grid-template-columns: minmax(220px, 300px) minmax(0, 1fr); align-items: end; }
+}
+.sin-resultados { padding: 28px 0; border-top: 1px solid var(--tinta); }
+.sin-resultados p { color: var(--gris); margin-bottom: 14px; }
+.sin-resultados .vacio-titulo { color: var(--tinta); margin-bottom: 4px; }
+
+/* Tabla comercial: filas en cuadrícula con roles ARIA explícitos */
+.tabla, .tabla thead, .tabla tbody { display: block; }
+.tabla { width: 100%; }
+.tabla th, .tabla td { padding: 0; text-align: left; font-weight: inherit; }
+.encabezado-tabla {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0, 0, 0, 0); white-space: nowrap;
+}
+.fila-categoria { display: block; }
+.fila-categoria th {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+  padding: 30px 4px 10px; border-bottom: 2px solid var(--tinta);
+  font-size: 17px; font-weight: 700;
+}
+.cat-cuenta { font-size: 13px; font-weight: 400; color: var(--gris); }
+.fila-producto {
+  display: grid; align-items: center; gap: 4px 16px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "nombre precio" "piezas pieza" "cant importe";
+  padding: 14px 8px; border-bottom: 1px solid var(--linea-suave);
+}
+.fila-producto:hover { background: #F3F5F6; }
+.fila-producto.seleccionada { background: var(--seleccion); box-shadow: inset 3px 0 0 var(--petroleo); }
+.c-nombre { grid-area: nombre; font-size: 16px; font-weight: 600; line-height: 1.3; }
+.c-piezas { grid-area: piezas; font-size: 14px; color: var(--gris); }
+.c-precio { grid-area: precio; text-align: right; font-size: 16px; font-weight: 600; }
+.c-pieza { grid-area: pieza; text-align: right; font-size: 14px; color: var(--gris); }
+.c-cantidad { grid-area: cant; position: relative; }
+.c-importe { grid-area: importe; text-align: right; font-size: 17px; font-weight: 700; color: var(--gris); }
+.fila-producto.seleccionada .c-importe { color: var(--tinta); }
+.u-compacta { font-size: 13px; font-weight: 400; color: var(--gris); }
+.c-precio .u-compacta, .c-importe .u-compacta { margin-right: 4px; }
+
+.stepper {
+  display: inline-flex; align-items: stretch; overflow: hidden;
+  border: 1px solid var(--linea); border-radius: var(--radio); background: var(--papel);
+}
+.stepper button {
+  width: 44px; min-height: 44px; border: 0; background: var(--papel);
+  font-size: 20px; line-height: 1;
+}
+.stepper button:hover:not(:disabled) { background: var(--niebla); }
+.stepper button:disabled { color: #A5AEB5; cursor: not-allowed; }
+.stepper input {
+  width: 58px; padding: 0; border: 0; border-left: 1px solid var(--linea); border-right: 1px solid var(--linea);
+  border-radius: 0; background: var(--papel); text-align: center; font-size: 16px; font-weight: 600;
+}
+.stepper input[aria-invalid="true"] { background: var(--error-fondo); color: var(--error); }
+.stepper :focus-visible { outline-offset: -3px; }
+.error-cant { display: block; margin-top: 6px; font-size: 12.5px; line-height: 1.35; color: var(--error); }
+
+@container catalogo (min-width: 740px) {
+  .encabezado-tabla {
+    position: sticky; top: var(--alto-cab); z-index: 5;
+    width: auto; height: auto; overflow: visible; clip: auto; white-space: normal;
+    background: var(--blanco);
+  }
+  .fila-encabezado, .fila-producto {
+    grid-template-columns: minmax(140px, 1fr) 72px 108px 92px 126px 104px;
+    grid-template-areas: "nombre piezas precio pieza cant importe";
+    gap: 0 12px;
+  }
+  .fila-encabezado { display: grid; align-items: end; padding: 10px 8px 8px; border-bottom: 1px solid var(--tinta); }
+  .tabla .fila-encabezado > * { font-size: 12.5px; font-weight: 600; color: var(--gris); line-height: 1.25; }
+  .fila-producto { padding: 10px 8px; }
+  .u-compacta { display: none; }
+  .c-piezas, .c-precio, .c-pieza, .c-importe { text-align: right; }
+  .c-cantidad { justify-self: center; }
+  .stepper button { width: 36px; min-height: 40px; }
+  .stepper input { width: 50px; }
+  .error-cant {
+    position: absolute; top: 100%; right: 0; z-index: 4; width: max-content; max-width: 260px;
+    margin-top: 2px; padding: 4px 8px; background: var(--error-fondo);
+    border: 1px solid var(--error); border-radius: var(--radio);
+  }
+}
+@media (pointer: coarse) {
+  .stepper button { min-height: 48px; }
+}
+
+/* ==========================================================================
+   7. Resumen del pedido (panel lateral en escritorio, hoja inferior en móvil)
+   ========================================================================== */
+.resumen {
+  min-width: 0; padding: 20px; background: var(--papel);
+  border: 1px solid var(--linea); border-radius: var(--radio);
+}
+.resumen-cab { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.resumen h2 { font-size: 20px; font-weight: 700; }
+.resumen-conteo { margin-top: 2px; font-size: 13.5px; color: var(--gris); }
+.solo-compacto { display: none; }
+.vacio { margin-top: 14px; padding: 18px 0 6px; border-top: 1px solid var(--tinta); }
+.vacio-titulo { font-weight: 600; }
+.vacio p:not(.vacio-titulo) { margin-top: 2px; font-size: 14.5px; color: var(--gris); }
+.lineas { margin-top: 14px; border-top: 1px solid var(--tinta); }
+.linea {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px;
+  padding: 12px 0; border-bottom: 1px solid var(--linea-suave);
+}
+.linea-nombre { font-size: 15px; font-weight: 600; line-height: 1.3; }
+.linea-importe { font-weight: 700; text-align: right; }
+.linea-detalles { grid-column: 1 / -1; display: grid; }
+.linea-detalle { font-size: 13px; color: var(--gris); }
+.linea-controles { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; margin-top: 6px; }
+.mini-stepper { display: inline-flex; align-items: center; border: 1px solid var(--linea); border-radius: var(--radio); }
+.mini-paso { width: 42px; height: 40px; border: 0; background: var(--papel); font-size: 18px; line-height: 1; }
+.mini-paso:hover:not(:disabled) { background: var(--niebla); }
+.mini-paso:disabled { color: #A5AEB5; cursor: not-allowed; }
+.mini-cantidad { min-width: 38px; text-align: center; font-weight: 600; }
+.mini-stepper :focus-visible { outline-offset: -3px; }
+.btn-quitar {
+  min-height: 40px; padding: 0 4px; border: 0; background: none;
+  color: var(--gris); font-size: 13.5px; text-decoration: underline; text-underline-offset: 3px;
+}
+.btn-quitar:hover { color: var(--error); }
+.totales { margin-top: 16px; display: grid; gap: 8px; }
+.totales > div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.totales dt { font-size: 14.5px; color: var(--gris); }
+.totales dd { font-weight: 600; }
+.totales .dato-descuento dd { color: var(--petroleo); }
+.totales .total-final { margin-top: 4px; padding-top: 12px; border-top: 2px solid var(--tinta); }
+.totales .total-final dt { font-size: 16px; font-weight: 700; color: var(--tinta); }
+.totales .total-final dd { font-size: 28px; font-weight: 700; letter-spacing: -.01em; line-height: 1.1; }
+.politica-envio { margin-top: 10px; font-size: 12.5px; line-height: 1.45; color: var(--gris); }
+.resumen-acciones { display: grid; gap: 4px; margin-top: 18px; }
+.nota-local { margin-top: 8px; font-size: 12.5px; color: var(--gris); }
+@media (min-width: 1100px) {
+  .resumen {
+    position: sticky; top: calc(var(--alto-cab) + 16px);
+    max-height: calc(100vh - var(--alto-cab) - 32px); overflow: auto;
+  }
+}
+.velo { position: fixed; inset: 0; z-index: 38; background: rgba(23, 35, 46, .45); }
+.barra-inferior {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 35;
+  display: flex; align-items: center; gap: 16px;
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+  background: var(--papel); border-top: 1px solid var(--tinta);
+}
+.bi-total { flex: 1; min-width: 0; }
+.bi-etiqueta { display: block; font-size: 13px; color: var(--gris); }
+.bi-importe { display: block; font-size: 22px; font-weight: 700; line-height: 1.15; }
+@media (min-width: 1100px) { .barra-inferior { display: none; } }
+@media (max-width: 1099px) {
+  body[data-vista="catalogo"] { padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+  .resumen {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+    max-width: 640px; margin: 0 auto;
+    max-height: 88vh; max-height: 88dvh; overflow: auto;
+    padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px));
+    border-width: 1px 1px 0; border-radius: 6px 6px 0 0;
+    transform: translateY(100%); visibility: hidden;
+    transition: transform .2s ease, visibility 0s linear .2s;
+  }
+  .resumen.abierto { transform: none; visibility: visible; transition: transform .2s ease; }
+  .solo-compacto { display: inline-flex; }
+}
+body[data-vista="revision"] .barra-inferior { display: none; }
+
+/* ==========================================================================
+   8. Notificaciones
+   ========================================================================== */
+.avisos {
+  position: fixed; left: 16px; bottom: 16px; z-index: 60;
+  display: grid; gap: 8px; max-width: min(380px, calc(100vw - 32px));
+}
+@media (max-width: 1099px) {
+  body[data-vista="catalogo"] .avisos { bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
+}
+.aviso {
+  display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 14px;
+  background: var(--tinta); color: #fff; border-radius: var(--radio);
+  font-size: 14px; line-height: 1.35; box-shadow: 0 4px 14px rgba(23, 35, 46, .22);
+}
+.aviso-error { background: var(--error); }
+.aviso-texto { flex: 1; }
+.aviso-accion {
+  padding: 6px 10px; border: 1px solid rgba(255, 255, 255, .7); border-radius: var(--radio);
+  background: none; color: #fff; font-weight: 600; font-size: 13.5px;
+}
+.aviso-cierre { width: 32px; height: 32px; border: 0; background: none; color: #fff; font-size: 20px; line-height: 1; }
+.aviso :focus-visible { outline-color: #fff; }
+
+/* ==========================================================================
+   9. Revisión y vista previa de la cotización
+   ========================================================================== */
+.rev-cab { padding: 28px 0 18px; }
+.volver {
+  display: inline-block; margin-bottom: 10px; padding: 8px 0;
+  color: var(--petroleo); font-size: 14.5px; font-weight: 600;
+  text-decoration: underline; text-underline-offset: 3px;
+}
+.rev-cab h2 { font-size: clamp(1.5rem, 1.2rem + 1.4vw, 2rem); font-weight: 700; letter-spacing: -.01em; }
+.rev-cab p { margin-top: 6px; max-width: 64ch; color: var(--gris); }
+.rev-layout { display: grid; gap: 28px; padding-bottom: 64px; }
+.rev-lado { min-width: 0; }
+@media (min-width: 1000px) {
+  .rev-layout { grid-template-columns: 360px minmax(0, 1fr); gap: 40px; align-items: start; }
+  .rev-lado {
+    position: sticky; top: calc(var(--alto-cab) + 16px);
+    max-height: calc(100vh - var(--alto-cab) - 32px); overflow: auto; padding-right: 4px;
+  }
+}
+.subtitulo { font-size: 18px; font-weight: 700; }
+.ayuda { font-size: 13px; color: var(--gris); }
+.rev-lado form .ayuda { margin: 2px 0 16px; }
+.campo { display: grid; gap: 6px; margin-bottom: 16px; }
+.campo label { font-size: 14.5px; font-weight: 600; }
+.campo input, .campo textarea {
+  width: 100%; min-height: 46px; padding: 11px 12px;
+  border: 1px solid var(--linea); border-radius: var(--radio); background: var(--papel);
+}
+.campo textarea { min-height: 100px; resize: vertical; }
+.campo input[aria-invalid="true"] { border-color: var(--error); }
+.campo .error { font-size: 13px; color: var(--error); }
+.acciones { display: grid; gap: 10px; margin: 8px 0 20px; }
+.aviso-envio {
+  padding: 12px 14px; border-left: 3px solid var(--petroleo);
+  background: var(--niebla); font-size: 14px;
+}
+.aviso-envio p + p { margin-top: 6px; }
+.texto-plano { margin-top: 16px; }
+.texto-plano summary { padding: 8px 0; font-size: 14.5px; font-weight: 600; cursor: pointer; }
+.texto-plano textarea {
+  width: 100%; min-height: 240px; padding: 10px 12px; resize: vertical;
+  border: 1px solid var(--linea); border-radius: var(--radio); background: var(--papel);
+  font-size: 13px; line-height: 1.5;
+}
+
+.documento {
+  container: doc / inline-size; min-width: 0;
+  padding: clamp(18px, 4vw, 40px); background: var(--papel);
+  border: 1px solid var(--linea); color: var(--tinta);
+}
+.doc-cab {
+  display: flex; flex-wrap: wrap; justify-content: space-between; gap: 20px;
+  padding-bottom: 20px; border-bottom: 2px solid var(--tinta);
+}
+.doc-marca { display: flex; align-items: center; gap: 10px; }
+.doc-titulo { font-size: 22px; font-weight: 700; letter-spacing: -.005em; }
+.doc-meta { display: grid; grid-template-columns: max-content max-content; gap: 3px 14px; margin-top: 8px; font-size: 13.5px; }
+.doc-meta dt { color: var(--gris); }
+.doc-meta dd { font-weight: 600; }
+.doc-cliente {
+  display: grid; gap: 14px 24px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  padding: 18px 0; border-bottom: 1px solid var(--linea);
+}
+.doc-cliente dt { font-size: 13px; color: var(--gris); }
+.doc-cliente dd { font-weight: 600; overflow-wrap: anywhere; }
+.doc-tabla { display: block; width: 100%; }
+.doc-tabla thead, .doc-tabla tbody { display: block; }
+.doc-tabla th, .doc-tabla td { padding: 0; text-align: left; font-weight: inherit; }
+.doc-enc {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0, 0, 0, 0); white-space: nowrap;
+}
+.doc-fila {
+  display: grid; align-items: baseline; gap: 2px 14px;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  grid-template-areas: "n n n i" "p z c c";
+  padding: 12px 0; border-bottom: 1px solid var(--linea-suave);
+}
+.d-nombre { grid-area: n; font-weight: 600; }
+.d-paq { grid-area: p; }
+.d-pzas { grid-area: z; }
+.d-precio { grid-area: c; }
+.d-importe { grid-area: i; text-align: right; font-weight: 700; }
+.d-paq, .d-pzas, .d-precio { font-size: 13.5px; color: var(--gris); }
+.doc-totales { display: grid; gap: 6px; max-width: 360px; margin: 18px 0 0 auto; }
+.doc-totales > div { display: flex; justify-content: space-between; gap: 16px; }
+.doc-totales dt { color: var(--gris); }
+.doc-totales dd { font-weight: 600; }
+.doc-totales .tf { margin-top: 4px; padding-top: 10px; border-top: 2px solid var(--tinta); font-size: 20px; }
+.doc-totales .tf dt { color: var(--tinta); font-weight: 700; }
+.doc-totales .tf dd { font-weight: 700; }
+.doc-notas { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--linea); }
+.doc-notas h4 { font-size: 14px; font-weight: 700; }
+.doc-notas p { margin-top: 4px; font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.doc-legal { display: grid; gap: 4px; margin-top: 22px; font-size: 12px; line-height: 1.5; color: var(--gris); }
+@container doc (min-width: 600px) {
+  .doc-enc {
+    position: static; display: grid; width: auto; height: auto; overflow: visible; clip: auto; white-space: normal;
+    align-items: end; padding: 12px 0 8px; border-bottom: 1px solid var(--tinta);
+  }
+  .doc-enc, .doc-fila {
+    grid-template-columns: minmax(0, 1fr) 76px 76px 112px 112px;
+    grid-template-areas: "n p z c i"; gap: 0 12px;
+  }
+  .doc-enc > * { font-size: 12.5px; font-weight: 600; color: var(--gris); }
+  .doc-enc .d-paq, .doc-enc .d-pzas, .doc-enc .d-precio, .doc-enc .d-importe { text-align: right; }
+  .doc-fila { align-items: center; }
+  .u-compacta { display: none; }
+  .d-paq, .d-pzas, .d-precio { text-align: right; font-size: 15px; color: var(--tinta); }
+}
+
+/* ==========================================================================
+   10. Pie
+   ========================================================================== */
+.pie { border-top: 1px solid var(--linea); padding: 24px 0 32px; font-size: 13px; color: var(--gris); }
+.pie-interno { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 32px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; scroll-behavior: auto !important; }
+}
+
+/* ==========================================================================
+   11. Impresión: solo se imprime el documento de la cotización
+   ========================================================================== */
+@media print {
+  @page { size: A4; margin: 16mm; }
+  html, body { background: #fff; }
+  body, body[data-vista] { padding: 0; font-size: 11pt; }
+  .saltar, .cabecera, .barra-inferior, .avisos, .velo, .pie { display: none !important; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body[data-vista="revision"] .rev-cab,
+  body[data-vista="revision"] .rev-lado { display: none !important; }
+  body[data-vista="revision"] .contenedor { max-width: none; padding: 0; }
+  body[data-vista="revision"] .rev-layout { display: block; padding: 0; }
+  body[data-vista="revision"] .documento { padding: 0; border: 0; }
+  .doc-fila, .doc-totales, .doc-notas { break-inside: avoid; }
+}
+</style>
+</head>
+<body data-vista="catalogo">
+
+<!-- Símbolo de la marca (tipográfico, sin imágenes externas) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="marca-n" viewBox="0 0 26 26">
+    <path d="M5 22V4M21 22V4" stroke="currentColor" stroke-width="3" stroke-linecap="square" fill="none"/>
+    <path d="M5 4L21 22" stroke="#19716D" stroke-width="3" fill="none"/>
+  </symbol>
+</svg>
+
+<a class="saltar" href="#catalogo">Ir al catálogo</a>
+
+<header class="cabecera">
+  <div class="cabecera-interna">
+    <a class="marca" href="#catalogo">
+      <svg class="marca-svg" width="26" height="26" aria-hidden="true" focusable="false"><use href="#marca-n"></use></svg>
+      <span class="marca-texto">
+        <span class="marca-nombre" data-empresa="nombre"></span>
+        <span class="marca-desc" data-empresa="descriptor"></span>
+      </span>
+    </a>
+    <nav class="nav" aria-label="Principal">
+      <a class="nav-enlace" href="#catalogo">Catálogo</a>
+      <button class="nav-enlace" type="button" id="nav-pedido">Pedido<span id="nav-cuenta" hidden></span></button>
+      <a class="btn btn-primario btn-cab" id="cta-cabecera" href="#cotizacion">Solicitar cotización</a>
+    </nav>
+  </div>
+</header>
+
+<main id="contenido">
+  <div id="error-config" class="contenedor" hidden></div>
+
+  <!-- ===================== VISTA 1: CATÁLOGO Y PEDIDO ===================== -->
+  <div id="vista-catalogo">
+    <div class="contenedor">
+      <section class="intro" id="intro" aria-labelledby="titulo-pagina">
+        <div>
+          <h1 id="titulo-pagina">Cotización de pedido mayorista</h1>
+          <p>Seleccione los paquetes que necesita y consulte el importe de su pedido al instante. Antes de solicitar la cotización podrá revisarla, copiarla o imprimirla.</p>
+        </div>
+        <div>
+          <dl class="ficha">
+            <div><dt>Folio provisional</dt><dd id="ficha-folio">-</dd></div>
+            <div><dt>Fecha</dt><dd id="ficha-fecha">-</dd></div>
+            <div><dt>Estado</dt><dd id="ficha-estado">Borrador</dd></div>
+            <div><dt>Moneda</dt><dd id="ficha-moneda">MXN</dd></div>
+          </dl>
+          <p class="ficha-nota">El folio se genera en este navegador y no está registrado en ningún sistema de <span data-empresa="nombre"></span>.</p>
+        </div>
+      </section>
+
+      <div class="layout">
+        <section id="catalogo" class="col-catalogo" aria-labelledby="titulo-catalogo">
+          <h2 class="titulo-seccion" id="titulo-catalogo">Catálogo mayorista</h2>
+          <p class="nota-precios" id="nota-precios"></p>
+
+          <div class="barra">
+            <div class="busqueda">
+              <label for="buscar">Buscar por nombre</label>
+              <input id="buscar" type="search" autocomplete="off" placeholder="Por ejemplo: Don Julio">
+            </div>
+            <div class="filtros" id="filtros" role="group" aria-label="Filtrar por categoría"></div>
+          </div>
+          <p class="conteo" id="conteo-resultados" aria-live="polite"></p>
+
+          <div id="sin-resultados" class="sin-resultados" hidden>
+            <p class="vacio-titulo">Ningún producto coincide con la búsqueda.</p>
+            <p>Revise el nombre o muestre todo el catálogo.</p>
+            <button type="button" class="btn" id="limpiar-filtros">Mostrar todo el catálogo</button>
+          </div>
+
+          <table class="tabla" id="tabla-catalogo" role="table" aria-label="Productos disponibles para cotizar, por paquete">
+            <thead class="encabezado-tabla" role="rowgroup">
+              <tr class="fila-encabezado" role="row">
+                <th class="c-nombre" role="columnheader" scope="col">Producto</th>
+                <th class="c-piezas" role="columnheader" scope="col">Piezas por paquete</th>
+                <th class="c-precio" role="columnheader" scope="col">Precio por paquete</th>
+                <th class="c-pieza" role="columnheader" scope="col">Precio por pieza</th>
+                <th class="c-cantidad" role="columnheader" scope="col">Paquetes</th>
+                <th class="c-importe" role="columnheader" scope="col">Importe</th>
+              </tr>
+            </thead>
+          </table>
+        </section>
+
+        <section id="pedido" class="resumen" aria-labelledby="resumen-titulo">
+          <div class="resumen-cab">
+            <h2 id="resumen-titulo" tabindex="-1">Pedido</h2>
+            <button type="button" class="btn solo-compacto" id="cerrar-resumen">Cerrar</button>
+          </div>
+          <p class="resumen-conteo" id="resumen-conteo">Sin productos seleccionados</p>
+
+          <div class="vacio" id="resumen-vacio">
+            <p class="vacio-titulo">Su pedido está vacío</p>
+            <p>Indique la cantidad de paquetes en el catálogo para armar la cotización.</p>
+          </div>
+          <ul class="lineas" id="resumen-lineas" aria-label="Productos del pedido" hidden></ul>
+
+          <dl class="totales">
+            <div><dt>Subtotal</dt><dd id="res-subtotal">$0.00</dd></div>
+            <div><dt>Envío</dt><dd id="res-envio">$0.00</dd></div>
+            <div class="dato-descuento" id="fila-descuento" hidden><dt>Descuento autorizado</dt><dd id="res-descuento">$0.00</dd></div>
+            <div class="total-final"><dt>Total final</dt><dd id="res-total">$0.00</dd></div>
+          </dl>
+          <p class="politica-envio" id="politica-envio"></p>
+
+          <div class="resumen-acciones">
+            <button type="button" class="btn btn-primario" id="btn-solicitar" disabled>Solicitar cotización</button>
+            <button type="button" class="btn-texto" id="btn-vaciar" disabled>Vaciar pedido</button>
+          </div>
+          <p class="nota-local">El pedido se conserva solo en este navegador.</p>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== VISTA 2: REVISIÓN DE LA COTIZACIÓN ===================== -->
+  <div id="vista-revision" hidden>
+    <div class="contenedor">
+      <div class="rev-cab">
+        <a class="volver" href="#catalogo" id="btn-volver">Volver al catálogo</a>
+        <h2 id="titulo-revision" tabindex="-1">Revisar cotización</h2>
+        <p>Complete los datos opcionales y verifique la vista previa. La cotización es un borrador: esta página no la envía.</p>
+      </div>
+
+      <div class="rev-layout">
+        <div class="rev-lado">
+          <form id="form-datos" novalidate>
+            <h3 class="subtitulo">Datos para la cotización</h3>
+            <p class="ayuda">Todos los campos son opcionales y no se guardan en este navegador.</p>
+            <div class="campo">
+              <label for="f-nombre">Nombre del cliente o negocio</label>
+              <input id="f-nombre" type="text" data-campo="nombre" maxlength="120" autocomplete="organization">
+            </div>
+            <div class="campo">
+              <label for="f-telefono">WhatsApp o teléfono del cliente</label>
+              <input id="f-telefono" type="tel" inputmode="tel" data-campo="telefono" maxlength="20" autocomplete="off" aria-describedby="e-telefono">
+              <p class="error" id="e-telefono" hidden>Revise el número: ingrese 10 dígitos (o con lada del país).</p>
+            </div>
+            <div class="campo">
+              <label for="f-correo">Correo del cliente</label>
+              <input id="f-correo" type="email" inputmode="email" data-campo="correo" maxlength="120" autocomplete="off" aria-describedby="e-correo">
+              <p class="error" id="e-correo" hidden>Revise el correo: debe tener el formato nombre@dominio.com.</p>
+            </div>
+            <div class="campo">
+              <label for="f-ciudad">Ciudad o zona de entrega</label>
+              <input id="f-ciudad" type="text" data-campo="ciudad" maxlength="120" autocomplete="off">
+            </div>
+            <div class="campo">
+              <label for="f-notas">Notas del pedido</label>
+              <textarea id="f-notas" data-campo="notas" maxlength="600" aria-describedby="a-notas"></textarea>
+              <p class="ayuda" id="a-notas">Si requiere condiciones comerciales especiales, indíquelas aquí. No modifican los importes hasta que <span data-empresa="nombre"></span> las autorice.</p>
+            </div>
+          </form>
+
+          <div class="acciones">
+            <h3 class="subtitulo">Enviar o descargar</h3>
+            <button type="button" class="btn btn-primario" id="btn-wa-cliente">Enviar por WhatsApp al cliente</button>
+            <button type="button" class="btn" id="btn-correo-cliente">Enviar por correo al cliente</button>
+            <button type="button" class="btn" id="btn-descargar">Descargar cotización (.txt)</button>
+            <button type="button" class="btn" id="btn-imprimir">Descargar PDF / Imprimir</button>
+            <button type="button" class="btn" id="btn-copiar">Copiar resumen</button>
+            <a class="btn" id="btn-whatsapp" href="#" target="_blank" rel="noopener" hidden>Enviar pedido a GRUPO NEXUS por WhatsApp</a>
+            <a class="btn" id="btn-correo" href="#" target="_blank" rel="noopener" hidden>Enviar pedido a GRUPO NEXUS por correo</a>
+          </div>
+
+          <div class="aviso-envio" id="aviso-envio"></div>
+
+          <details class="texto-plano" id="detalle-texto">
+            <summary>Ver el texto de la cotización</summary>
+            <label class="sr-only" for="texto-cotizacion">Texto de la cotización</label>
+            <textarea id="texto-cotizacion" readonly rows="14"></textarea>
+          </details>
+        </div>
+
+        <article class="documento" id="documento" aria-labelledby="doc-titulo">
+          <header class="doc-cab">
+            <div class="doc-marca">
+              <svg class="marca-svg" width="30" height="30" aria-hidden="true" focusable="false"><use href="#marca-n"></use></svg>
+              <div class="marca-texto">
+                <span class="marca-nombre" data-empresa="nombre"></span>
+                <span class="marca-desc" data-empresa="descriptor"></span>
+              </div>
+            </div>
+            <div>
+              <h3 class="doc-titulo" id="doc-titulo">Cotización</h3>
+              <dl class="doc-meta">
+                <dt>Folio provisional</dt><dd id="doc-folio"></dd>
+                <dt>Fecha</dt><dd id="doc-fecha"></dd>
+                <dt>Estado</dt><dd id="doc-estado"></dd>
+                <dt>Moneda</dt><dd id="doc-moneda"></dd>
+              </dl>
+            </div>
+          </header>
+
+          <dl class="doc-cliente">
+            <div><dt>Cliente</dt><dd id="doc-nombre"></dd></div>
+            <div><dt>Contacto</dt><dd id="doc-contacto"></dd></div>
+            <div><dt>Ciudad o zona de entrega</dt><dd id="doc-ciudad"></dd></div>
+          </dl>
+
+          <table class="doc-tabla" role="table" aria-label="Productos de la cotización">
+            <thead role="rowgroup">
+              <tr class="doc-enc" role="row">
+                <th class="d-nombre" role="columnheader" scope="col">Producto</th>
+                <th class="d-paq" role="columnheader" scope="col">Paquetes</th>
+                <th class="d-pzas" role="columnheader" scope="col">Piezas</th>
+                <th class="d-precio" role="columnheader" scope="col">Precio por paquete</th>
+                <th class="d-importe" role="columnheader" scope="col">Importe</th>
+              </tr>
+            </thead>
+            <tbody id="doc-lineas" role="rowgroup"></tbody>
+          </table>
+
+          <dl class="doc-totales">
+            <div><dt>Subtotal</dt><dd id="doc-subtotal"></dd></div>
+            <div><dt>Envío</dt><dd id="doc-envio"></dd></div>
+            <div id="doc-fila-descuento" hidden><dt>Descuento autorizado</dt><dd id="doc-descuento"></dd></div>
+            <div class="tf"><dt>Total final</dt><dd id="doc-total"></dd></div>
+          </dl>
+
+          <section class="doc-notas" id="doc-notas" hidden>
+            <h4>Notas del pedido</h4>
+            <p id="doc-notas-texto"></p>
+          </section>
+
+          <ul class="doc-legal" id="doc-legal"></ul>
+        </article>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="pie" id="pie">
+  <div class="contenedor pie-interno">
+    <p><strong data-empresa="nombre"></strong> <span data-empresa="descriptor"></span></p>
+    <p>Los precios están en pesos mexicanos (MXN). La solicitud no se envía automáticamente.</p>
+  </div>
+</footer>
+
+<div class="barra-inferior" id="barra-inferior">
+  <div class="bi-total">
+    <span class="bi-etiqueta" id="bi-detalle">Pedido vacío</span>
+    <span class="bi-importe" id="bi-importe">$0.00</span>
+  </div>
+  <button type="button" class="btn btn-primario" id="btn-ver-pedido" aria-expanded="false" aria-controls="pedido">Ver pedido</button>
+</div>
+<div class="velo" id="velo" hidden></div>
+<div class="avisos" id="avisos" aria-live="polite"></div>
+<div class="sr-only" id="anuncios" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+'use strict';
+
+/* ==========================================================================
+   1. CONFIGURACIÓN - único bloque que se edita para mantener el catálogo
+   --------------------------------------------------------------------------
+   - Los importes se escriben en pesos mexicanos (enteros o con centavos).
+   - "piezas" es el número de piezas que contiene cada paquete.
+   - envioPorPedido: se cobra una sola vez por pedido y solo si incluye al
+     menos un producto.
+   - descuentoAutorizado: importe en pesos que la empresa autoriza para esta
+     cotización. Los clientes no pueden fijarlo desde la interfaz.
+   - canales: opcionales. Si se llenan, aparecen botones que abren el correo o
+     WhatsApp del cliente con el texto ya preparado (el envío lo confirma él).
+   ========================================================================== */
+const CONFIG = {
+  empresa: { nombre: 'GRUPO NEXUS', descriptor: 'Distribución mayorista' },
+  moneda: 'MXN',
+  estadoCotizacion: 'Borrador',
+  envioPorPedido: 350,
+  descuentoAutorizado: 0,
+  maxPaquetesPorProducto: 999,
+  canales: { correo: '', whatsapp: '528116828732' },
+  notasCotizacion: [
+    'Importes expresados en pesos mexicanos (MXN).',
+    'Cotización preliminar generada en el navegador: no constituye un pedido confirmado.',
+    'La disponibilidad, las condiciones de pago y la fecha de entrega no forman parte de este borrador y deben confirmarse con GRUPO NEXUS.'
+  ],
+  categorias: [
+    { id: 'agave', nombre: 'Tequilas y destilados de agave' },
+    { id: 'brandy', nombre: 'Brandy' },
+    { id: 'whisky', nombre: 'Whisky' }
+  ],
+  productos: [
+    { id: 'don-julio-70', categoria: 'agave', nombre: 'Don Julio 70', precioPaquete: 4900, piezas: 12 },
+    { id: 'don-julio-reposado', categoria: 'agave', nombre: 'Don Julio Reposado', precioPaquete: 4400, piezas: 12 },
+    { id: 'don-julio-blanco', categoria: 'agave', nombre: 'Don Julio Blanco', precioPaquete: 3000, piezas: 6 },
+    { id: 'maestro-dobel', categoria: 'agave', nombre: 'Maestro Dobel', precioPaquete: 3500, piezas: 12 },
+    { id: '1800-cristalino', categoria: 'agave', nombre: '1800 Cristalino', precioPaquete: 3400, piezas: 6 },
+    { id: '1800-blanco', categoria: 'agave', nombre: '1800 Blanco', precioPaquete: 3400, piezas: 6 },
+    { id: '1800-reposado', categoria: 'agave', nombre: '1800 Reposado', precioPaquete: 3400, piezas: 6 },
+    { id: '1800-anejo', categoria: 'agave', nombre: '1800 Añejo', precioPaquete: 3400, piezas: 6 },
+    { id: 'tradicional-plata', categoria: 'agave', nombre: 'Tradicional Plata', precioPaquete: 3400, piezas: 12 },
+    { id: 'tradicional-reposado', categoria: 'agave', nombre: 'Tradicional Reposado', precioPaquete: 3400, piezas: 12 },
+    { id: 'hornitos-3-4', categoria: 'agave', nombre: 'Hornitos 3/4', precioPaquete: 3200, piezas: 12 },
+    { id: 'centenario-plata-reposado', categoria: 'agave', nombre: 'Centenario Plata y Reposado', precioPaquete: 3400, piezas: 12 },
+    { id: 'jose-cuervo-especial', categoria: 'agave', nombre: 'José Cuervo Especial', precioPaquete: 3300, piezas: 12 },
+    { id: 'herradura-antiguo', categoria: 'agave', nombre: 'Herradura Antiguo', precioPaquete: 3400, piezas: 12 },
+    { id: 'torres-10', categoria: 'brandy', nombre: 'Torres 10', precioPaquete: 3700, piezas: 12 },
+    { id: 'buchanans-12', categoria: 'whisky', nombre: 'Buchanan’s 12', precioPaquete: 5300, piezas: 12 },
+    { id: 'jw-etiqueta-roja', categoria: 'whisky', nombre: 'Johnnie Walker Etiqueta Roja', precioPaquete: 3500, piezas: 12 },
+    { id: 'jw-etiqueta-negra', categoria: 'whisky', nombre: 'Johnnie Walker Etiqueta Negra', precioPaquete: 5500, piezas: 12 }
+  ]
+};
+
+/* ==========================================================================
+   2. LÓGICA PURA (sin DOM): formato, validación, cálculo y texto
+   Todos los importes se manejan internamente en centavos enteros.
+   ========================================================================== */
+const formatoMoneda = new Intl.NumberFormat('es-MX', { style: 'currency', currency: CONFIG.moneda });
+const formatoEntero = new Intl.NumberFormat('es-MX');
+const formatoFecha = new Intl.DateTimeFormat('es-MX', { dateStyle: 'long' });
+const SIGNO_MENOS = '\u2212';
+
+const formatearMXN = (centavos) => formatoMoneda.format(centavos / 100);
+const formatearEntero = (n) => formatoEntero.format(n);
+const plural = (n, singular, pluralTexto) => (n === 1 ? singular : pluralTexto);
+const pesosACentavos = (pesos) => Math.round(pesos * 100);
+const normalizarTexto = (texto) =>
+  String(texto).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+
+const esCorreo = (texto) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(texto);
+const soloDigitos = (texto) => String(texto).replace(/\D/g, '');
+
+function validarConfiguracion(config) {
+  const errores = [];
+  const importeValido = (v) => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 100000000;
+
+  if (!importeValido(config.envioPorPedido)) errores.push('envioPorPedido debe ser un importe en pesos igual o mayor a cero.');
+  if (!importeValido(config.descuentoAutorizado)) errores.push('descuentoAutorizado debe ser un importe en pesos igual o mayor a cero.');
+  if (!Number.isInteger(config.maxPaquetesPorProducto) || config.maxPaquetesPorProducto < 1 || config.maxPaquetesPorProducto > 999999) {
+    errores.push('maxPaquetesPorProducto debe ser un entero entre 1 y 999999.');
+  }
+
+  const idsCategoria = new Set();
+  for (const categoria of config.categorias) {
+    if (!categoria.id || idsCategoria.has(categoria.id)) errores.push(`Categoría con identificador vacío o repetido: "${categoria.id}".`);
+    if (!categoria.nombre) errores.push(`La categoría "${categoria.id}" no tiene nombre.`);
+    idsCategoria.add(categoria.id);
+  }
+
+  const idsProducto = new Set();
+  for (const p of config.productos) {
+    const etiqueta = p.nombre || p.id || '(sin nombre)';
+    if (!p.id || idsProducto.has(p.id)) errores.push(`Producto con identificador vacío o repetido: "${p.id}".`);
+    idsProducto.add(p.id);
+    if (!p.nombre) errores.push(`El producto "${p.id}" no tiene nombre.`);
+    if (!idsCategoria.has(p.categoria)) errores.push(`${etiqueta}: la categoría "${p.categoria}" no existe.`);
+    if (!importeValido(p.precioPaquete) || p.precioPaquete <= 0) errores.push(`${etiqueta}: precioPaquete debe ser un importe mayor a cero.`);
+    if (!Number.isInteger(p.piezas) || p.piezas < 1) errores.push(`${etiqueta}: piezas debe ser un entero mayor o igual a 1.`);
+  }
+
+  const { correo = '', whatsapp = '' } = config.canales || {};
+  if (correo && !esCorreo(correo)) errores.push('canales.correo no es una dirección válida.');
+  if (whatsapp && (soloDigitos(whatsapp).length < 10 || soloDigitos(whatsapp).length > 15)) {
+    errores.push('canales.whatsapp debe tener entre 10 y 15 dígitos, con lada del país.');
+  }
+  return errores;
+}
+
+function construirCatalogo(config) {
+  return config.productos.map((p) => {
+    const precioPaqueteCentavos = pesosACentavos(p.precioPaquete);
+    return {
+      id: p.id,
+      categoria: p.categoria,
+      nombre: p.nombre,
+      piezas: p.piezas,
+      precioPaqueteCentavos,
+      // Referencia informativa: los importes siempre se calculan con el precio del paquete.
+      precioPiezaCentavos: Math.round(precioPaqueteCentavos / p.piezas),
+      nombreNormalizado: normalizarTexto(p.nombre)
+    };
+  });
+}
+
+/** Valida la cantidad de paquetes: entero entre 0 y el máximo. Acepta texto o número. */
+function parsearCantidad(valor, maximo) {
+  const falla = (mensaje) => ({ ok: false, mensaje });
+  const mensajeEntero = 'Ingrese un número entero de paquetes, sin comas ni decimales.';
+  const mensajeMaximo = `El máximo por producto es ${formatearEntero(maximo)} paquetes. Para volúmenes mayores, indíquelo en las notas del pedido.`;
+
+  if (typeof valor === 'number') {
+    if (!Number.isFinite(valor)) return falla('Ingrese solo números enteros.');
+    if (valor < 0) return falla('No se admiten cantidades negativas.');
+    if (!Number.isInteger(valor)) return falla(mensajeEntero);
+    if (valor > maximo) return falla(mensajeMaximo);
+    return { ok: true, valor: valor === 0 ? 0 : valor };
+  }
+  if (typeof valor !== 'string') return falla('Ingrese una cantidad (0 si no desea incluir el producto).');
+
+  const texto = valor.trim();
+  if (texto === '') return falla('Ingrese una cantidad (0 si no desea incluir el producto).');
+  if (/^[-\u2212\u2013]\s*\d/.test(texto)) return falla('No se admiten cantidades negativas.');
+  if (/^\d+$/.test(texto)) {
+    if (texto.replace(/^0+(?=\d)/, '').length > 7) return falla(mensajeMaximo);
+    const n = Number(texto);
+    return n > maximo ? falla(mensajeMaximo) : { ok: true, valor: n };
+  }
+  if (/^\d*[.,]\d*$/.test(texto) && /\d/.test(texto)) return falla(mensajeEntero);
+  return falla('Ingrese solo números enteros.');
+}
+
+function validarDescuentoCentavos(valor) {
+  if (!Number.isSafeInteger(valor)) return { ok: false, mensaje: 'El descuento debe ser un importe válido.' };
+  if (valor < 0) return { ok: false, mensaje: 'El descuento no puede ser negativo.' };
+  return { ok: true, valor };
+}
+
+/**
+ * Calcula la cotización. pedido = { idProducto: paquetes }.
+ *   Importe = paquetes x precio del paquete
+ *   Subtotal = suma de importes
+ *   Envío = una sola vez por pedido, solo si hay productos
+ *   Total = máximo entre 0 y (subtotal - descuento + envío)
+ */
+function calcularCotizacion(pedido, catalogo, opciones) {
+  const lineas = [];
+  for (const producto of catalogo) {
+    const paquetes = pedido[producto.id];
+    if (!Number.isInteger(paquetes) || paquetes <= 0) continue;
+    lineas.push({
+      producto,
+      paquetes,
+      piezas: paquetes * producto.piezas,
+      importe: paquetes * producto.precioPaqueteCentavos
+    });
+  }
+  const vacio = lineas.length === 0;
+  const subtotal = lineas.reduce((suma, linea) => suma + linea.importe, 0);
+  const envio = vacio ? 0 : opciones.envioCentavos;
+
+  const revision = validarDescuentoCentavos(opciones.descuentoCentavos ?? 0);
+  const descuentoSolicitado = revision.ok ? revision.valor : 0;
+  const total = Math.max(0, subtotal - descuentoSolicitado + envio);
+  const descuento = subtotal + envio - total; // descuento efectivamente aplicado
+
+  return {
+    lineas,
+    vacio,
+    subtotal,
+    envio,
+    descuento,
+    total,
+    descuentoInvalido: !revision.ok,
+    paquetes: lineas.reduce((suma, l) => suma + l.paquetes, 0),
+    piezas: lineas.reduce((suma, l) => suma + l.piezas, 0)
+  };
+}
+
+/** Deja solo ids conocidos con cantidades válidas mayores a cero (datos guardados o importados). */
+function normalizarPedido(origen, catalogo, maximo) {
+  const limpio = {};
+  if (!origen || typeof origen !== 'object') return limpio;
+  for (const producto of catalogo) {
+    if (!Object.hasOwn(origen, producto.id)) continue;
+    const resultado = parsearCantidad(origen[producto.id], maximo);
+    if (resultado.ok && resultado.valor > 0) limpio[producto.id] = resultado.valor;
+  }
+  return limpio;
+}
+
+function generarFolio(fecha = new Date()) {
+  const dos = (n) => String(n).padStart(2, '0');
+  const dia = `${fecha.getFullYear()}${dos(fecha.getMonth() + 1)}${dos(fecha.getDate())}`;
+  const alfabeto = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const bytes = new Uint8Array(4);
+  if (globalThis.crypto && globalThis.crypto.getRandomValues) globalThis.crypto.getRandomValues(bytes);
+  else bytes.forEach((_, i) => { bytes[i] = Math.floor(Math.random() * 256); });
+  let sufijo = '';
+  for (const b of bytes) sufijo += alfabeto[b % alfabeto.length];
+  return `PROV-${dia}-${sufijo}`;
+}
+
+function contactoPareceValido(texto) {
+  const valor = texto.trim();
+  if (valor === '') return true;
+  if (valor.includes('@')) return esCorreo(valor);
+  const digitos = soloDigitos(valor).length;
+  return /^[\d\s()+\-.]+$/.test(valor) && digitos >= 10 && digitos <= 15;
+}
+
+function telefonoPareceValido(texto) {
+  const valor = texto.trim();
+  if (valor === '') return true;
+  const digitos = soloDigitos(valor).length;
+  return /^[\d\s()+\-.]+$/.test(valor) && digitos >= 10 && digitos <= 15;
+}
+
+function correoPareceValido(texto) {
+  const valor = texto.trim();
+  return valor === '' || esCorreo(valor);
+}
+
+/** Número para wa.me: 10 dígitos se asumen de México (52); se quita el 1 antiguo de móviles (521). */
+function normalizarWhatsApp(texto) {
+  const d = soloDigitos(texto);
+  if (d.length === 10) return `52${d}`;
+  if (d.length === 13 && d.startsWith('521')) return `52${d.slice(3)}`;
+  return d;
+}
+
+function construirTextoCotizacion(cot, datos) {
+  const l = [];
+  l.push(`${datos.empresa} - ${datos.descriptor}`);
+  l.push(`COTIZACIÓN (${datos.estado.toUpperCase()})`);
+  l.push(`Folio provisional: ${datos.folio}`);
+  l.push(`Fecha: ${datos.fecha}`);
+  l.push(`Moneda: ${datos.moneda}`);
+  l.push('');
+  l.push(`Cliente: ${datos.nombre || 'No indicado'}`);
+  l.push(`Contacto: ${datos.contacto || 'No indicado'}`);
+  l.push(`Ciudad o zona de entrega: ${datos.ciudad || 'No indicada'}`);
+  l.push('');
+  l.push('PRODUCTOS');
+  cot.lineas.forEach((x, i) => {
+    l.push(`${i + 1}. ${x.producto.nombre}: ${formatearEntero(x.paquetes)} ${plural(x.paquetes, 'paquete', 'paquetes')} `
+      + `(${formatearEntero(x.piezas)} piezas) x ${formatearMXN(x.producto.precioPaqueteCentavos)} = ${formatearMXN(x.importe)}`);
+  });
+  l.push('');
+  l.push(`Subtotal: ${formatearMXN(cot.subtotal)}`);
+  l.push(`Envío: ${formatearMXN(cot.envio)}`);
+  if (cot.descuento > 0) l.push(`Descuento autorizado: ${SIGNO_MENOS}${formatearMXN(cot.descuento)}`);
+  l.push(`TOTAL FINAL: ${formatearMXN(cot.total)}`);
+  if (datos.notas) { l.push(''); l.push('Notas del pedido:'); l.push(datos.notas); }
+  l.push('');
+  for (const nota of datos.notasLegales) l.push(nota);
+  return l.join('\n');
+}
+
+/* ==========================================================================
+   3. ESTADO DE LA APLICACIÓN
+   ========================================================================== */
+const erroresConfiguracion = validarConfiguracion(CONFIG);
+const catalogo = erroresConfiguracion.length === 0 ? construirCatalogo(CONFIG) : [];
+const MAX_PAQUETES = CONFIG.maxPaquetesPorProducto;
+const OPCIONES_CALCULO = {
+  envioCentavos: pesosACentavos(CONFIG.envioPorPedido),
+  descuentoCentavos: pesosACentavos(CONFIG.descuentoAutorizado)
+};
+
+const estado = {
+  pedido: {},                 // { idProducto: paquetes }
+  folio: '',
+  fecha: '',
+  vista: 'catalogo',
+  categoria: 'todas',
+  busqueda: '',
+  contacto: { nombre: '', telefono: '', correo: '', ciudad: '', notas: '' },   // solo en memoria
+  almacenamientoDisponible: true,
+  pendiente: null,
+  disparadorResumen: null
+};
+
+const calcular = () => calcularCotizacion(estado.pedido, catalogo, OPCIONES_CALCULO);
+
+/* ==========================================================================
+   4. PERSISTENCIA LOCAL
+   --------------------------------------------------------------------------
+   Se guarda en localStorage, con el único propósito de que el cliente no
+   pierda su pedido al recargar la página:
+     - la versión del formato,
+     - el folio provisional y
+     - las cantidades por producto { id: paquetes }.
+   NO se guardan datos de contacto, notas, contraseñas ni datos bancarios.
+   Si el navegador bloquea el almacenamiento, la aplicación sigue funcionando.
+   ========================================================================== */
+const CLAVE_ALMACEN = 'grupo-nexus-cotizador:v1';
+const PATRON_FOLIO = /^PROV-\d{8}-[A-Z2-9]{4}$/;
+
+function cargarPedidoGuardado() {
+  try {
+    const crudo = window.localStorage.getItem(CLAVE_ALMACEN);
+    if (!crudo) return null;
+    const datos = JSON.parse(crudo);
+    if (!datos || datos.version !== 1) return null;
+    return {
+      pedido: normalizarPedido(datos.items, catalogo, MAX_PAQUETES),
+      folio: typeof datos.folio === 'string' && PATRON_FOLIO.test(datos.folio) ? datos.folio : null
+    };
+  } catch (error) {
+    return null;
+  }
+}
+
+function guardarPedido() {
+  try {
+    if (Object.keys(estado.pedido).length === 0) {
+      window.localStorage.removeItem(CLAVE_ALMACEN);
+    } else {
+      window.localStorage.setItem(CLAVE_ALMACEN, JSON.stringify({ version: 1, folio: estado.folio, items: estado.pedido }));
+    }
+  } catch (error) {
+    if (estado.almacenamientoDisponible) {
+      estado.almacenamientoDisponible = false;
+      avisar('Este navegador no permite guardar el pedido. Si recarga la página, deberá capturarlo de nuevo.', 'error', { duracion: 9000 });
+    }
+  }
+}
+
+/* ==========================================================================
+   5. HERRAMIENTAS DE DOM (sin innerHTML: todo el texto entra con textContent)
+   ========================================================================== */
+const $ = (selector, raiz = document) => raiz.querySelector(selector);
+const $$ = (selector, raiz = document) => Array.from(raiz.querySelectorAll(selector));
+const fijarTexto = (selector, texto) => { $(selector).textContent = texto; };
+
+function el(etiqueta, propiedades = {}, ...hijos) {
+  const nodo = document.createElement(etiqueta);
+  for (const [clave, valor] of Object.entries(propiedades)) {
+    if (valor === undefined || valor === null || valor === false) continue;
+    if (clave === 'class') nodo.className = valor;
+    else if (clave === 'text') nodo.textContent = valor;
+    else if (clave.startsWith('on')) nodo.addEventListener(clave.slice(2), valor);
+    else nodo.setAttribute(clave, valor === true ? '' : valor);
+  }
+  nodo.append(...hijos.flat().filter((h) => h !== null && h !== undefined && h !== false));
+  return nodo;
+}
+
+const movimientoReducido = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ==========================================================================
+   6. NOTIFICACIONES Y ANUNCIOS PARA LECTORES DE PANTALLA
+   ========================================================================== */
+function avisar(texto, tipo = 'info', opciones = {}) {
+  const contenedor = $('#avisos');
+  const aviso = el('div', { class: tipo === 'error' ? 'aviso aviso-error' : 'aviso', role: tipo === 'error' ? 'alert' : null },
+    el('span', { class: 'aviso-texto', text: texto }));
+  let temporizador = null;
+  const cerrar = () => { clearTimeout(temporizador); aviso.remove(); };
+  if (opciones.accion) {
+    aviso.append(el('button', {
+      type: 'button', class: 'aviso-accion', text: opciones.accion.texto,
+      onclick: () => { cerrar(); opciones.accion.alHacerClic(); }
+    }));
+  }
+  aviso.append(el('button', { type: 'button', class: 'aviso-cierre', 'aria-label': 'Cerrar notificación', text: '\u00D7', onclick: cerrar }));
+  contenedor.append(aviso);
+  while (contenedor.children.length > 3) contenedor.firstElementChild.remove();
+  temporizador = setTimeout(cerrar, opciones.duracion || 5500);
+}
+
+let temporizadorAnuncio = null;
+function anunciar(texto) {
+  clearTimeout(temporizadorAnuncio);
+  temporizadorAnuncio = setTimeout(() => { fijarTexto('#anuncios', texto); }, 400);
+}
+
+/* ==========================================================================
+   7. CATÁLOGO: renderizado, filtros y edición de cantidades
+   ========================================================================== */
+const filas = new Map();        // id -> referencias de la fila del catálogo
+const grupos = [];              // [{ categoria, cuerpo, cuenta, ids }]
+
+function crearFilaProducto(p) {
+  const idError = `err-${p.id}`;
+  const menos = el('button', { type: 'button', 'data-accion': 'menos', 'aria-label': `Quitar un paquete de ${p.nombre}`, text: SIGNO_MENOS });
+  const mas = el('button', { type: 'button', 'data-accion': 'mas', 'aria-label': `Agregar un paquete de ${p.nombre}`, text: '+' });
+  const entrada = el('input', {
+    type: 'text', inputmode: 'numeric', autocomplete: 'off', enterkeyhint: 'done',
+    id: `cant-${p.id}`, 'data-entrada': '', 'aria-label': `Paquetes de ${p.nombre}`, 'aria-describedby': idError, value: '0'
+  });
+  const error = el('span', { class: 'error-cant', id: idError, role: 'alert', hidden: true });
+  const importe = el('span', { text: formatearMXN(0) });
+
+  const tr = el('tr', { class: 'fila-producto', role: 'row', 'data-id': p.id },
+    el('th', { class: 'c-nombre', role: 'rowheader', scope: 'row', text: p.nombre }),
+    el('td', { class: 'c-piezas', role: 'cell' },
+      el('span', { text: formatearEntero(p.piezas) }),
+      el('span', { class: 'u-compacta', text: ` ${plural(p.piezas, 'pieza', 'piezas')} por paquete` })),
+    el('td', { class: 'c-precio', role: 'cell' },
+      el('span', { text: formatearMXN(p.precioPaqueteCentavos) }),
+      el('span', { class: 'u-compacta', text: ' por paquete' })),
+    el('td', { class: 'c-pieza', role: 'cell' },
+      el('span', { text: formatearMXN(p.precioPiezaCentavos) }),
+      el('span', { class: 'u-compacta', text: ' por pieza' })),
+    el('td', { class: 'c-cantidad', role: 'cell' }, el('div', { class: 'stepper' }, menos, entrada, mas), error),
+    el('td', { class: 'c-importe', role: 'cell' }, el('span', { class: 'u-compacta', text: 'Importe' }), importe)
+  );
+  filas.set(p.id, { producto: p, tr, entrada, menos, mas, error, importe });
+  return tr;
+}
+
+function renderizarCatalogo() {
+  const tabla = $('#tabla-catalogo');
+  for (const categoria of CONFIG.categorias) {
+    const productos = catalogo.filter((p) => p.categoria === categoria.id);
+    if (productos.length === 0) continue;
+    const idTitulo = `cat-${categoria.id}`;
+    const cuenta = el('span', { class: 'cat-cuenta' });
+    const cuerpo = el('tbody', { role: 'rowgroup', 'aria-labelledby': idTitulo },
+      el('tr', { class: 'fila-categoria', role: 'row' },
+        el('th', { role: 'rowheader', scope: 'rowgroup', colspan: '6', id: idTitulo },
+          el('span', { text: categoria.nombre }), cuenta)),
+      ...productos.map(crearFilaProducto));
+    tabla.append(cuerpo);
+    grupos.push({ categoria: categoria.id, cuerpo, cuenta, ids: productos.map((p) => p.id) });
+  }
+}
+
+function renderizarFiltros() {
+  const opciones = [{ id: 'todas', nombre: 'Todos', total: catalogo.length }].concat(
+    CONFIG.categorias.map((c) => ({ id: c.id, nombre: c.nombre, total: catalogo.filter((p) => p.categoria === c.id).length })));
+  $('#filtros').replaceChildren(...opciones.map((o) =>
+    el('button', { type: 'button', class: 'filtro', 'data-categoria': o.id, 'aria-pressed': String(o.id === estado.categoria) },
+      o.nombre, el('span', { class: 'cuenta', text: ` (${o.total})` }))));
+}
+
+function aplicarFiltros() {
+  const consulta = normalizarTexto(estado.busqueda);
+  let visibles = 0;
+  for (const grupo of grupos) {
+    let enGrupo = 0;
+    for (const id of grupo.ids) {
+      const fila = filas.get(id);
+      const coincide = (estado.categoria === 'todas' || fila.producto.categoria === estado.categoria)
+        && (consulta === '' || fila.producto.nombreNormalizado.includes(consulta));
+      fila.tr.hidden = !coincide;
+      if (coincide) enGrupo += 1;
+    }
+    grupo.cuerpo.hidden = enGrupo === 0;
+    grupo.cuenta.textContent = `${enGrupo} ${plural(enGrupo, 'presentación', 'presentaciones')}`;
+    visibles += enGrupo;
+  }
+  $('#tabla-catalogo').hidden = visibles === 0;
+  $('#sin-resultados').hidden = visibles !== 0;
+  fijarTexto('#conteo-resultados', `Mostrando ${visibles} de ${catalogo.length} productos`);
+  $$('#filtros .filtro').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.categoria === estado.categoria)));
+}
+
+function mostrarErrorFila(fila, mensaje) {
+  fila.error.textContent = mensaje;
+  fila.error.hidden = false;
+  fila.entrada.setAttribute('aria-invalid', 'true');
+}
+function limpiarErrorFila(fila) {
+  fila.error.textContent = '';
+  fila.error.hidden = true;
+  fila.entrada.removeAttribute('aria-invalid');
+}
+
+/** Sincroniza una fila del catálogo con el estado. Con `forzar` también reescribe el campo. */
+function actualizarFila(id, forzar) {
+  const fila = filas.get(id);
+  const paquetes = estado.pedido[id] || 0;
+  if (forzar) { fila.entrada.value = String(paquetes); limpiarErrorFila(fila); }
+  fila.menos.disabled = paquetes <= 0;
+  fila.mas.disabled = paquetes >= MAX_PAQUETES;
+  fila.importe.textContent = formatearMXN(paquetes * fila.producto.precioPaqueteCentavos);
+  fila.tr.classList.toggle('seleccionada', paquetes > 0);
+}
+
+function establecerCantidad(id, cantidad, { desdeCampo = false } = {}) {
+  if (cantidad > 0) estado.pedido[id] = cantidad;
+  else delete estado.pedido[id];
+  actualizarFila(id, !desdeCampo);
+  actualizarVistas();
+}
+
+function cambiarCantidad(id, delta) {
+  const nueva = (estado.pedido[id] || 0) + delta;
+  if (nueva < 0 || nueva > MAX_PAQUETES) return;
+  establecerCantidad(id, nueva);
+}
+
+function sincronizarTodo() {
+  for (const id of filas.keys()) actualizarFila(id, true);
+  actualizarVistas();
+}
+
+/* ==========================================================================
+   8. RESUMEN DEL PEDIDO, BARRA INFERIOR Y DOCUMENTO
+   ========================================================================== */
+const lineasResumen = new Map();   // id -> referencias de la línea del resumen
+
+function crearLineaResumen(p) {
+  const importe = el('span', { class: 'linea-importe' });
+  const detalle = el('span', { class: 'linea-detalle' });
+  const piezas = el('span', { class: 'linea-detalle' });
+  const cantidad = el('span', { class: 'mini-cantidad' });
+  const menos = el('button', { type: 'button', class: 'mini-paso', 'data-accion': 'menos', 'data-id': p.id, 'aria-label': `Quitar un paquete de ${p.nombre}`, text: SIGNO_MENOS });
+  const mas = el('button', { type: 'button', class: 'mini-paso', 'data-accion': 'mas', 'data-id': p.id, 'aria-label': `Agregar un paquete de ${p.nombre}`, text: '+' });
+  const quitar = el('button', { type: 'button', class: 'btn-quitar', 'data-accion': 'quitar', 'data-id': p.id, 'aria-label': `Quitar ${p.nombre} del pedido`, text: 'Quitar' });
+  const li = el('li', { class: 'linea', 'data-id': p.id },
+    el('span', { class: 'linea-nombre', text: p.nombre }),
+    importe,
+    el('span', { class: 'linea-detalles' }, detalle, piezas),
+    el('div', { class: 'linea-controles' },
+      el('div', { class: 'mini-stepper', role: 'group', 'aria-label': `Paquetes de ${p.nombre}` }, menos, cantidad, mas),
+      quitar));
+  return { li, importe, detalle, piezas, cantidad, menos, mas, quitar };
+}
+
+function actualizarLineaResumen(refs, linea) {
+  const p = linea.producto;
+  refs.importe.textContent = formatearMXN(linea.importe);
+  refs.detalle.textContent = `${formatearEntero(linea.paquetes)} ${plural(linea.paquetes, 'paquete', 'paquetes')} x ${formatearMXN(p.precioPaqueteCentavos)}`;
+  refs.piezas.textContent = `${formatearEntero(linea.piezas)} ${plural(linea.piezas, 'pieza', 'piezas')} en total (${p.piezas} por paquete)`;
+  refs.cantidad.textContent = String(linea.paquetes);
+  refs.menos.disabled = false;
+  refs.mas.disabled = linea.paquetes >= MAX_PAQUETES;
+}
+
+function renderizarResumen(cot) {
+  const lista = $('#resumen-lineas');
+  const activo = document.activeElement;
+  const vigentes = new Set(cot.lineas.map((l) => l.producto.id));
+  let focoPerdido = false;
+
+  for (const [id, refs] of lineasResumen) {
+    if (vigentes.has(id)) continue;
+    if (refs.li.contains(activo)) focoPerdido = true;
+    refs.li.remove();
+    lineasResumen.delete(id);
+  }
+  cot.lineas.forEach((linea, i) => {
+    let refs = lineasResumen.get(linea.producto.id);
+    if (!refs) { refs = crearLineaResumen(linea.producto); lineasResumen.set(linea.producto.id, refs); }
+    actualizarLineaResumen(refs, linea);
+    if (lista.children[i] !== refs.li) lista.insertBefore(refs.li, lista.children[i] || null);
+  });
+
+  lista.hidden = cot.vacio;
+  $('#resumen-vacio').hidden = !cot.vacio;
+  fijarTexto('#resumen-conteo', cot.vacio
+    ? 'Sin productos seleccionados'
+    : `${cot.lineas.length} ${plural(cot.lineas.length, 'producto', 'productos')}, ${formatearEntero(cot.paquetes)} ${plural(cot.paquetes, 'paquete', 'paquetes')}, ${formatearEntero(cot.piezas)} ${plural(cot.piezas, 'pieza', 'piezas')}`);
+  fijarTexto('#res-subtotal', formatearMXN(cot.subtotal));
+  fijarTexto('#res-envio', formatearMXN(cot.envio));
+  $('#fila-descuento').hidden = cot.descuento === 0;
+  fijarTexto('#res-descuento', `${SIGNO_MENOS}${formatearMXN(cot.descuento)}`);
+  fijarTexto('#res-total', formatearMXN(cot.total));
+  $('#btn-solicitar').disabled = cot.vacio;
+  $('#btn-vaciar').disabled = cot.vacio;
+
+  if (focoPerdido) {
+    const destino = lista.querySelector('.btn-quitar') || $('#resumen-titulo');
+    destino.focus({ preventScroll: true });
+  }
+}
+
+function renderizarBarraInferior(cot) {
+  fijarTexto('#bi-importe', formatearMXN(cot.total));
+  fijarTexto('#bi-detalle', cot.vacio ? 'Pedido vacío' : `${formatearEntero(cot.paquetes)} ${plural(cot.paquetes, 'paquete', 'paquetes')} con envío`);
+  const cuenta = $('#nav-cuenta');
+  cuenta.hidden = cot.vacio;
+  cuenta.textContent = cot.vacio ? '' : ` (${formatearEntero(cot.paquetes)})`;
+}
+
+function actualizarFecha() {
+  estado.fecha = formatoFecha.format(new Date());
+  fijarTexto('#ficha-fecha', estado.fecha);
+}
+
+function datosCotizacion() {
+  return {
+    empresa: CONFIG.empresa.nombre,
+    descriptor: CONFIG.empresa.descriptor,
+    estado: CONFIG.estadoCotizacion,
+    folio: estado.folio,
+    fecha: estado.fecha,
+    moneda: CONFIG.moneda,
+    nombre: estado.contacto.nombre.trim(),
+    telefono: estado.contacto.telefono.trim(),
+    correo: estado.contacto.correo.trim(),
+    contacto: [estado.contacto.telefono.trim(), estado.contacto.correo.trim()].filter(Boolean).join(' · '),
+    ciudad: estado.contacto.ciudad.trim(),
+    notas: estado.contacto.notas.trim(),
+    notasLegales: CONFIG.notasCotizacion
+  };
+}
+
+function crearFilaDocumento(linea) {
+  const p = linea.producto;
+  return el('tr', { class: 'doc-fila', role: 'row' },
+    el('th', { class: 'd-nombre', role: 'rowheader', scope: 'row', text: p.nombre }),
+    el('td', { class: 'd-paq', role: 'cell' },
+      el('span', { text: formatearEntero(linea.paquetes) }),
+      el('span', { class: 'u-compacta', text: ` ${plural(linea.paquetes, 'paquete', 'paquetes')}` })),
+    el('td', { class: 'd-pzas', role: 'cell' },
+      el('span', { text: formatearEntero(linea.piezas) }),
+      el('span', { class: 'u-compacta', text: ` ${plural(linea.piezas, 'pieza', 'piezas')}` })),
+    el('td', { class: 'd-precio', role: 'cell' },
+      el('span', { text: formatearMXN(p.precioPaqueteCentavos) }),
+      el('span', { class: 'u-compacta', text: ' por paquete' })),
+    el('td', { class: 'd-importe', role: 'cell', text: formatearMXN(linea.importe) }));
+}
+
+function configurarCanales(texto) {
+  const correo = (CONFIG.canales.correo || '').trim();
+  const whatsapp = soloDigitos(CONFIG.canales.whatsapp || '');
+  const enlaceCorreo = $('#btn-correo');
+  const enlaceWhatsapp = $('#btn-whatsapp');
+  enlaceCorreo.hidden = !esCorreo(correo);
+  if (!enlaceCorreo.hidden) {
+    enlaceCorreo.href = `mailto:${correo}?subject=${encodeURIComponent(`Solicitud de cotización ${estado.folio}`)}&body=${encodeURIComponent(texto)}`;
+  }
+  enlaceWhatsapp.hidden = whatsapp.length < 10 || whatsapp.length > 15;
+  if (!enlaceWhatsapp.hidden) enlaceWhatsapp.href = `https://wa.me/${whatsapp}?text=${encodeURIComponent(texto)}`;
+
+  const hayCanal = !enlaceCorreo.hidden || !enlaceWhatsapp.hidden;
+  $('#aviso-envio').replaceChildren(
+    el('p', { text: 'Esta página no envía nada por sí sola: los botones abren WhatsApp o el correo con el texto preparado y el envío lo confirma usted. WhatsApp y el correo no adjuntan archivos automáticamente: para mandar el PDF, descárguelo y adjúntelo.' }),
+    el('p', {
+      text: hayCanal
+        ? `Con los botones "Enviar pedido a ${CONFIG.empresa.nombre}" la solicitud se abre dirigida a la empresa.`
+        : `Para solicitarla, copie el resumen o guárdelo como PDF y envíelo a ${CONFIG.empresa.nombre} por el canal de contacto que le hayan indicado.`
+    }));
+}
+
+function renderizarDocumento(cot) {
+  const datos = datosCotizacion();
+  fijarTexto('#doc-folio', datos.folio);
+  fijarTexto('#doc-fecha', datos.fecha);
+  fijarTexto('#doc-estado', datos.estado);
+  fijarTexto('#doc-moneda', datos.moneda);
+  fijarTexto('#doc-nombre', datos.nombre || 'No indicado');
+  fijarTexto('#doc-contacto', datos.contacto || 'No indicado');
+  fijarTexto('#doc-ciudad', datos.ciudad || 'No indicada');
+  $('#doc-lineas').replaceChildren(...cot.lineas.map(crearFilaDocumento));
+  fijarTexto('#doc-subtotal', formatearMXN(cot.subtotal));
+  fijarTexto('#doc-envio', formatearMXN(cot.envio));
+  $('#doc-fila-descuento').hidden = cot.descuento === 0;
+  fijarTexto('#doc-descuento', `${SIGNO_MENOS}${formatearMXN(cot.descuento)}`);
+  fijarTexto('#doc-total', formatearMXN(cot.total));
+  $('#doc-notas').hidden = datos.notas === '';
+  fijarTexto('#doc-notas-texto', datos.notas);
+  $('#doc-legal').replaceChildren(...datos.notasLegales.map((nota) => el('li', { text: nota })));
+  const texto = construirTextoCotizacion(cot, datos);
+  $('#texto-cotizacion').value = texto;
+  configurarCanales(texto);
+}
+
+function actualizarVistas() {
+  const cot = calcular();
+  renderizarResumen(cot);
+  renderizarBarraInferior(cot);
+  fijarTexto('#ficha-folio', estado.folio);
+  if (estado.vista === 'revision') {
+    if (cot.vacio) navegar('catalogo');
+    else renderizarDocumento(cot);
+  }
+  guardarPedido();
+  anunciar(cot.vacio
+    ? 'Pedido vacío.'
+    : `Pedido actualizado: ${formatearEntero(cot.paquetes)} ${plural(cot.paquetes, 'paquete', 'paquetes')}, total ${formatearMXN(cot.total)}.`);
+}
+
+function vaciarPedido() {
+  if (Object.keys(estado.pedido).length === 0) return;
+  const copia = { pedido: { ...estado.pedido }, folio: estado.folio };
+  estado.pedido = {};
+  estado.folio = generarFolio();
+  sincronizarTodo();
+  avisar('Pedido vaciado.', 'info', {
+    duracion: 9000,
+    accion: {
+      texto: 'Deshacer',
+      alHacerClic: () => {
+        estado.pedido = copia.pedido;
+        estado.folio = copia.folio;
+        sincronizarTodo();
+        avisar('Pedido restaurado.');
+      }
+    }
+  });
+}
+
+/* ==========================================================================
+   9. HOJA DEL PEDIDO EN PANTALLAS PEQUEÑAS
+   ========================================================================== */
+const pantallaCompacta = window.matchMedia('(max-width: 1099px)');
+const elementosDeFondo = () => [$('.cabecera'), $('#intro'), $('#catalogo'), $('#pie'), $('#barra-inferior')];
+
+function resumenAbierto() { return $('#pedido').classList.contains('abierto'); }
+
+function abrirResumen() {
+  const panel = $('#pedido');
+  if (!pantallaCompacta.matches) {
+    panel.scrollIntoView({ block: 'start', behavior: movimientoReducido() ? 'auto' : 'smooth' });
+    $('#resumen-titulo').focus({ preventScroll: true });
+    return;
+  }
+  if (resumenAbierto()) return;
+  estado.disparadorResumen = document.activeElement;
+  panel.classList.add('abierto');
+  panel.setAttribute('role', 'dialog');
+  panel.setAttribute('aria-modal', 'true');
+  $('#velo').hidden = false;
+  elementosDeFondo().forEach((nodo) => { nodo.inert = true; });
+  $('#btn-ver-pedido').setAttribute('aria-expanded', 'true');
+  $('#resumen-titulo').focus({ preventScroll: true });
+}
+
+function cerrarResumen(devolverFoco = true) {
+  const panel = $('#pedido');
+  if (!resumenAbierto()) return;
+  panel.classList.remove('abierto');
+  panel.removeAttribute('role');
+  panel.removeAttribute('aria-modal');
+  $('#velo').hidden = true;
+  elementosDeFondo().forEach((nodo) => { nodo.inert = false; });
+  $('#btn-ver-pedido').setAttribute('aria-expanded', 'false');
+  const destino = estado.disparadorResumen && document.contains(estado.disparadorResumen) ? estado.disparadorResumen : $('#btn-ver-pedido');
+  if (devolverFoco) destino.focus({ preventScroll: true });
+}
+
+/* ==========================================================================
+   10. NAVEGACIÓN ENTRE VISTAS (catálogo y revisión)
+   ========================================================================== */
+function navegar(vista) {
+  const hash = vista === 'revision' ? '#cotizacion' : '#catalogo';
+  if (location.hash === hash) enrutar();
+  else location.hash = hash;
+}
+
+function mostrarVista(vista) {
+  const cambio = estado.vista !== vista;
+  estado.vista = vista;
+  document.body.dataset.vista = vista;
+  $('#vista-catalogo').hidden = vista !== 'catalogo';
+  $('#vista-revision').hidden = vista !== 'revision';
+  document.title = vista === 'revision'
+    ? `Revisar cotización | ${CONFIG.empresa.nombre}`
+    : `${CONFIG.empresa.nombre} | Cotizador mayorista`;
+  if (vista === 'revision') {
+    cerrarResumen(false);
+    actualizarFecha();
+    renderizarDocumento(calcular());
+    if (cambio) {
+      window.scrollTo(0, 0);
+      $('#titulo-revision').focus({ preventScroll: true });
+    }
+  } else if (cambio) {
+    if (location.hash === '#catalogo') $('#catalogo').scrollIntoView({ block: 'start' });
+    else window.scrollTo(0, 0);
+  }
+}
+
+function enrutar() {
+  if (location.hash === '#cotizacion') {
+    if (calcular().vacio) {
+      avisar('Agregue al menos un producto para solicitar la cotización.', 'error');
+      location.hash = '#catalogo';
+      return;
+    }
+    mostrarVista('revision');
+    return;
+  }
+  mostrarVista('catalogo');
+  if (estado.pendiente === 'pedido') { estado.pendiente = null; abrirResumen(); }
+}
+
+function irAPedido() {
+  if (estado.vista !== 'catalogo') { estado.pendiente = 'pedido'; navegar('catalogo'); return; }
+  abrirResumen();
+}
+
+/* ==========================================================================
+   11. COPIAR E IMPRIMIR
+   ========================================================================== */
+async function copiarAlPortapapeles(texto) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(texto);
+      return true;
+    }
+  } catch (error) { /* se intenta el método alterno */ }
+  const area = $('#texto-cotizacion');
+  $('#detalle-texto').open = true;
+  area.focus();
+  area.select();
+  try { return document.execCommand('copy'); } catch (error) { return false; }
+}
+
+async function copiarCotizacion() {
+  actualizarFecha();
+  renderizarDocumento(calcular());
+  const texto = $('#texto-cotizacion').value;
+  if (await copiarAlPortapapeles(texto)) {
+    avisar('Resumen copiado. Péguelo en el canal por el que enviará su solicitud.');
+  } else {
+    $('#detalle-texto').open = true;
+    $('#texto-cotizacion').focus();
+    $('#texto-cotizacion').select();
+    avisar('No fue posible copiar automáticamente. El texto quedó seleccionado: cópielo con Ctrl+C.', 'error', { duracion: 9000 });
+  }
+}
+
+function textoParaEnviar() {
+  actualizarFecha();
+  renderizarDocumento(calcular());
+  return $('#texto-cotizacion').value;
+}
+
+function abrirEnlaceExterno(url) {
+  const a = el('a', { href: url, target: '_blank', rel: 'noopener' });
+  document.body.append(a);
+  a.click();
+  a.remove();
+}
+
+function enviarWhatsAppCliente() {
+  const campo = $('#f-telefono');
+  const tel = estado.contacto.telefono.trim();
+  if (tel === '' || !telefonoPareceValido(tel)) {
+    avisar(tel === '' ? 'Escriba el WhatsApp del cliente para enviarle la cotización.' : 'El número del cliente no es válido. Use 10 dígitos.', 'error');
+    $('#e-telefono').hidden = tel === '';
+    campo.focus();
+    return;
+  }
+  abrirEnlaceExterno(`https://wa.me/${normalizarWhatsApp(tel)}?text=${encodeURIComponent(textoParaEnviar())}`);
+}
+
+function enviarCorreoCliente() {
+  const campo = $('#f-correo');
+  const correo = estado.contacto.correo.trim();
+  if (correo === '' || !esCorreo(correo)) {
+    avisar(correo === '' ? 'Escriba el correo del cliente para enviarle la cotización.' : 'El correo del cliente no es válido.', 'error');
+    campo.focus();
+    return;
+  }
+  const asunto = `Cotización ${CONFIG.empresa.nombre} ${estado.folio}`;
+  window.location.href = `mailto:${correo}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(textoParaEnviar())}`;
+}
+
+function descargarCotizacion() {
+  const texto = textoParaEnviar();
+  const blob = new Blob(['\uFEFF', texto], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = el('a', { href: url, download: `cotizacion-${estado.folio}.txt` });
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  avisar('Cotización descargada. Para un PDF use "Descargar PDF / Imprimir".');
+}
+
+function imprimirCotizacion() {
+  actualizarFecha();
+  renderizarDocumento(calcular());
+  window.print();
+}
+
+/* ==========================================================================
+   12. EVENTOS
+   ========================================================================== */
+function conectarEventos() {
+  const tabla = $('#tabla-catalogo');
+
+  tabla.addEventListener('click', (e) => {
+    const boton = e.target.closest('button[data-accion]');
+    if (!boton) return;
+    const id = boton.closest('tr').dataset.id;
+    cambiarCantidad(id, boton.dataset.accion === 'mas' ? 1 : -1);
+    if (boton.disabled) filas.get(id).entrada.focus();
+  });
+  tabla.addEventListener('input', (e) => {
+    const entrada = e.target.closest('input[data-entrada]');
+    if (!entrada) return;
+    const id = entrada.closest('tr').dataset.id;
+    const fila = filas.get(id);
+    const resultado = parsearCantidad(entrada.value, MAX_PAQUETES);
+    if (!resultado.ok) { mostrarErrorFila(fila, resultado.mensaje); return; }
+    limpiarErrorFila(fila);
+    if (resultado.valor !== (estado.pedido[id] || 0)) establecerCantidad(id, resultado.valor, { desdeCampo: true });
+  });
+  tabla.addEventListener('change', (e) => {
+    const entrada = e.target.closest('input[data-entrada]');
+    if (!entrada) return;
+    const id = entrada.closest('tr').dataset.id;
+    const resultado = parsearCantidad(entrada.value, MAX_PAQUETES);
+    if (!resultado.ok) {
+      avisar(`${filas.get(id).producto.nombre}: ${resultado.mensaje} Se conserva ${estado.pedido[id] || 0} paquetes.`, 'error', { duracion: 7000 });
+    }
+    actualizarFila(id, true);
+  });
+  tabla.addEventListener('keydown', (e) => {
+    const entrada = e.target.closest('input[data-entrada]');
+    if (!entrada) return;
+    const id = entrada.closest('tr').dataset.id;
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      cambiarCantidad(id, e.key === 'ArrowUp' ? 1 : -1);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      entrada.blur();
+    }
+  });
+
+  $('#buscar').addEventListener('input', (e) => { estado.busqueda = e.target.value; aplicarFiltros(); });
+  $('#filtros').addEventListener('click', (e) => {
+    const boton = e.target.closest('button[data-categoria]');
+    if (!boton) return;
+    estado.categoria = boton.dataset.categoria;
+    aplicarFiltros();
+  });
+  $('#limpiar-filtros').addEventListener('click', () => {
+    estado.categoria = 'todas';
+    estado.busqueda = '';
+    $('#buscar').value = '';
+    aplicarFiltros();
+    $('#buscar').focus();
+  });
+
+  $('#resumen-lineas').addEventListener('click', (e) => {
+    const boton = e.target.closest('button[data-accion]');
+    if (!boton) return;
+    const id = boton.dataset.id;
+    const accion = boton.dataset.accion;
+    if (accion === 'quitar') establecerCantidad(id, 0);
+    else cambiarCantidad(id, accion === 'mas' ? 1 : -1);
+    if (boton.disabled && lineasResumen.has(id)) lineasResumen.get(id).quitar.focus();
+  });
+
+  $('#btn-solicitar').addEventListener('click', () => { cerrarResumen(false); navegar('revision'); });
+  $('#btn-vaciar').addEventListener('click', vaciarPedido);
+  $('#cta-cabecera').addEventListener('click', (e) => {
+    if (calcular().vacio) {
+      e.preventDefault();
+      avisar('Agregue al menos un producto para solicitar la cotización.', 'error');
+      if (estado.vista !== 'catalogo') navegar('catalogo');
+    }
+  });
+  $('#nav-pedido').addEventListener('click', irAPedido);
+  $('#btn-ver-pedido').addEventListener('click', abrirResumen);
+  $('#cerrar-resumen').addEventListener('click', () => cerrarResumen(true));
+  $('#velo').addEventListener('click', () => cerrarResumen(true));
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && resumenAbierto()) cerrarResumen(true); });
+  pantallaCompacta.addEventListener('change', () => cerrarResumen(false));
+
+  $('#form-datos').addEventListener('submit', (e) => e.preventDefault());
+  $('#form-datos').addEventListener('input', (e) => {
+    const campo = e.target.dataset.campo;
+    if (!campo) return;
+    estado.contacto[campo] = e.target.value;
+    if (campo === 'telefono' || campo === 'correo') {
+      const valido = campo === 'telefono' ? telefonoPareceValido(e.target.value) : correoPareceValido(e.target.value);
+      $(`#e-${campo}`).hidden = valido;
+      if (valido) e.target.removeAttribute('aria-invalid'); else e.target.setAttribute('aria-invalid', 'true');
+    }
+    renderizarDocumento(calcular());
+  });
+  $('#btn-copiar').addEventListener('click', copiarCotizacion);
+  $('#btn-imprimir').addEventListener('click', imprimirCotizacion);
+  $('#btn-wa-cliente').addEventListener('click', enviarWhatsAppCliente);
+  $('#btn-correo-cliente').addEventListener('click', enviarCorreoCliente);
+  $('#btn-descargar').addEventListener('click', descargarCotizacion);
+
+  window.addEventListener('hashchange', enrutar);
+  window.addEventListener('beforeprint', () => {
+    actualizarFecha();
+    if (estado.vista === 'revision') renderizarDocumento(calcular());
+  });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) actualizarFecha(); });
+}
+
+/* ==========================================================================
+   13. ARRANQUE
+   ========================================================================== */
+function mostrarErroresConfiguracion(errores) {
+  const contenedor = $('#error-config');
+  contenedor.hidden = false;
+  contenedor.replaceChildren(el('div', { class: 'error-config', role: 'alert' },
+    el('strong', { text: 'El catálogo no se pudo cargar. Corrija la configuración del archivo:' }),
+    el('ul', {}, ...errores.map((mensaje) => el('li', { text: mensaje })))));
+  $('#vista-catalogo').hidden = true;
+  $('#barra-inferior').hidden = true;
+}
+
+function iniciar() {
+  $$('[data-empresa]').forEach((nodo) => { nodo.textContent = CONFIG.empresa[nodo.dataset.empresa]; });
+  fijarTexto('#ficha-estado', CONFIG.estadoCotizacion);
+  fijarTexto('#ficha-moneda', `${CONFIG.moneda} (pesos mexicanos)`);
+
+  if (erroresConfiguracion.length > 0) { mostrarErroresConfiguracion(erroresConfiguracion); return; }
+
+  const textoEnvio = `El envío (${formatearMXN(OPCIONES_CALCULO.envioCentavos)}) se agrega una sola vez por pedido y solo cuando incluye productos.`;
+  fijarTexto('#nota-precios', `Precios por paquete en pesos mexicanos. ${textoEnvio} El precio por pieza es una referencia redondeada a centavos.`);
+  fijarTexto('#politica-envio', textoEnvio);
+
+  const guardado = cargarPedidoGuardado();
+  estado.pedido = guardado ? guardado.pedido : {};
+  estado.folio = guardado && guardado.folio && Object.keys(estado.pedido).length > 0 ? guardado.folio : generarFolio();
+
+  renderizarFiltros();
+  renderizarCatalogo();
+  aplicarFiltros();
+  actualizarFecha();
+  conectarEventos();
+  sincronizarTodo();
+  enrutar();
+}
+
+iniciar();
+
+/* Interfaz mínima para pruebas automáticas; no expone datos adicionales. */
+window.NexusCotizador = Object.freeze({
+  config: CONFIG,
+  catalogo: () => catalogo,
+  construirCatalogo,
+  calcularCotizacion,
+  parsearCantidad,
+  validarDescuentoCentavos,
+  validarConfiguracion,
+  normalizarPedido,
+  construirTextoCotizacion,
+  generarFolio,
+  formatearMXN
+});
+})();
+</script>
+</body>
+</html>
